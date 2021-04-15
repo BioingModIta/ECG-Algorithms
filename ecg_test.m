@@ -1,20 +1,21 @@
 clear classes;
 
 function [K X Y P] = EKFstep(ES, R, Q, Yd, X, P)
-
 Ax = ES.Ad(X);
 P = Ax*P*Ax' + Q;
 X = ES.fd(X);
-
-K = P*ES.C'*(ES.C*P*ES.C' + R)^-1;
-P = P - K*ES.C*P;
-Y = ES.C*X;
-X = X + K*(Yd-Y);
+Cx = ES.Cd(X);
+K = P*Cx'*(Cx*P*Cx' + R)^-1;
+P = P - K*Cx*P;
+Y = ES.g(X);
+corr = K*(Yd-Y);
+X = X + corr;
+X(4) = max(X(4), ES.minPulse); %frequency saturation
 
 endfunction
 
 
-SR = 100;
+SR = 200;
 dt = 1/SR;
 
 ES = ECG_SYS(dt);
@@ -32,17 +33,17 @@ Xm = zeros(4,L);
 Xm(:,1) = Xm0;
 
 omega0 = 2*pi*1;
-X0 = [ 1 0  0 omega0 ]';
+X0 = [ 0.1 0.2 0 omega0 ]';
 X = zeros(4,L);
 X(:,1) = X0;
 y = zeros(1,L);
 
-R = noise;
-Q = diag([ 0 0 0 20 ]);
+R = 10;
+Q = diag([ 0.1 0.1 0 1000 ]);
 P = Q;
 
 for i = 1:L-1
-  ym(i) = ES.C*Xm(:,i) + randn(1,1)*noise;
+  ym(i) = ES.g(Xm(:,i)) + randn(1,1)*noise;
   Xm(:,i+1) = ES.fd(Xm(:,i));
   
   [ K X(:,i+1) y(i) P] = EKFstep(ES, R, Q, ym(i), X(:,i), P);

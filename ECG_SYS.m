@@ -3,18 +3,19 @@ classdef ECG_SYS
     a
     b
     th0
-    
-    C
+    minPulse
     dt
   endproperties
   
   methods
     function ths = ECG_SYS(dt)
       ths.dt = dt;
-      ths.a = [ 1.2 -5 30 -7.5 0.75 ]';
+      %ths.a = [ 1.2 -5 30 -7.5 0.75 ]';
+      ths.a = [ 0.04 -0.167 1 -0.25 0.025 ]'*1300;
       ths.b = [ 0.25 0.1 0.1 0.1 0.4 ]';
-      ths.C = [ 0 0 1 0 ];
       ths.th0 = [ -pi/3 -pi/12 0 pi/12 pi/2 ]';
+      
+      ths.minPulse = 0.2;
     endfunction
     
     function Xdot = fc(ths, X)
@@ -38,6 +39,11 @@ classdef ECG_SYS
                  s   c   ]*X(1:2) ;
                X(3) + ths.dt*(-sum(ths.a.*dth.*exp(-dth.^2./(2*ths.b.^2))) - X(3)) ;
                X(4); ];
+    endfunction
+    
+    function y = g(ths, X)
+      m = sqrt(X(1)^2 + X(2)^2);
+      y = m*X(3);
     endfunction
     
     function A = Ac(ths, X)
@@ -78,8 +84,15 @@ classdef ECG_SYS
               s      c        0      X2dX4d ;
             X3dX1d X3dX2d  1-ths.dt    0    ;
               0      0        0        1    ];  
-      
     endfunction
+    
+    function C = Cd(ths, X)
+      m = sqrt(X(1)^2 + X(2)^2);
+      X3oM = X(3)/m;
+      
+      C = [ X(1)*X3oM X(2)*X3oM m 0 ];
+    endfunction
+    
   endmethods
   
   
